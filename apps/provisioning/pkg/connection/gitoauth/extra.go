@@ -3,7 +3,6 @@ package gitoauth
 import (
 	"context"
 	"errors"
-	"net/url"
 
 	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -11,6 +10,7 @@ import (
 	provisioning "github.com/grafana/grafana/apps/provisioning/pkg/apis/provisioning/v0alpha1"
 	"github.com/grafana/grafana/apps/provisioning/pkg/connection"
 	"github.com/grafana/grafana/apps/provisioning/pkg/connection/oauth"
+	"github.com/grafana/grafana/apps/provisioning/pkg/repository/git"
 )
 
 func Extra(decrypter connection.Decrypter, allowInsecure bool) connection.Extra {
@@ -51,19 +51,11 @@ func validateEndpoint(path *field.Path, value string, allowInsecure bool) field.
 	if value == "" {
 		return field.ErrorList{field.Required(path, "an OAuth endpoint URL is required")}
 	}
-	u, err := url.Parse(value)
-	if err != nil || u.Host == "" {
-		return field.ErrorList{field.Invalid(path, value, "must be an absolute URL")}
+	if err := git.ValidateHTTPScheme(path, value); err != nil {
+		return field.ErrorList{err}
 	}
-	switch u.Scheme {
-	case "https":
-		return nil
-	case "http":
-		if allowInsecure {
-			return nil
-		}
+	if !allowInsecure && git.IsInsecureURLWithToken(value, true) {
 		return field.ErrorList{field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in cleartext")}
-	default:
-		return field.ErrorList{field.Invalid(path, value, "must use https://")}
 	}
+	return nil
 }
