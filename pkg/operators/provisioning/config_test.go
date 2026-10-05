@@ -58,7 +58,6 @@ func TestDefaultConnectionTypes(t *testing.T) {
 		apisprovisioning.GithubEnterpriseOAuthConnectionType,
 		apisprovisioning.BitbucketOAuthConnectionType,
 		apisprovisioning.GitlabOAuthConnectionType,
-		apisprovisioning.GitOAuthConnectionType,
 	}
 	extras := make([]connection.Extra, 0, len(registeredTypes))
 	for _, connectionType := range registeredTypes {
@@ -67,7 +66,7 @@ func TestDefaultConnectionTypes(t *testing.T) {
 		extras = append(extras, extra)
 	}
 
-	require.ElementsMatch(t, []string{"github", "githubEnterprise", "gitOAuth"}, defaultConnectionTypes(extras))
+	require.ElementsMatch(t, []string{"github", "githubEnterprise"}, defaultConnectionTypes(extras))
 }
 
 // roundTripperFunc lets a plain function stand in as an http.RoundTripper.

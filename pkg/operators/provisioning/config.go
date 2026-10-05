@@ -809,7 +809,7 @@ func (r *directConfigProvider) GetRestConfig(ctx context.Context) (*rest.Config,
 func defaultConnectionTypes(extras []connection.Extra) []string {
 	types := []string{string(provisioning.GithubConnectionType)}
 	for _, extra := range extras {
-		if extra.Type() == provisioning.GithubEnterpriseConnectionType || extra.Type() == provisioning.GitOAuthConnectionType {
+		if extra.Type() == provisioning.GithubEnterpriseConnectionType {
 			types = append(types, string(extra.Type()))
 		}
 	}
