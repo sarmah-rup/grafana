@@ -41,10 +41,8 @@ func validateSpec(spec provisioning.ConnectionSpec, allowInsecure bool) field.Er
 		return field.ErrorList{field.Required(path, "gitOAuth info must be specified for git OAuth connections")}
 	}
 
-	var errs field.ErrorList
-	errs = append(errs, validateEndpoint(path.Child("authURL"), spec.GitOAuth.AuthURL, allowInsecure)...)
-	errs = append(errs, validateEndpoint(path.Child("tokenURL"), spec.GitOAuth.TokenURL, allowInsecure)...)
-	return errs
+	errs := validateEndpoint(path.Child("authURL"), spec.GitOAuth.AuthURL, allowInsecure)
+	return append(errs, validateEndpoint(path.Child("tokenURL"), spec.GitOAuth.TokenURL, allowInsecure)...)
 }
 
 func validateEndpoint(path *field.Path, value string, allowInsecure bool) field.ErrorList {
