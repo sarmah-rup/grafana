@@ -64,10 +64,11 @@ func (c *oauthConnection) Test(ctx context.Context) (*provisioning.TestResults, 
 		), nil
 	}
 
+	if _, ok := c.provider.(RepositoryLister); !ok {
+		return connection.SuccessTestResults(), nil
+	}
+
 	if _, err := c.ListRepositories(ctx); err != nil {
-		if errors.Is(err, connection.ErrNotImplemented) {
-			return connection.SuccessTestResults(), nil
-		}
 		if errors.Is(err, connection.ErrAuthentication) {
 			return connection.FailedTestResults(
 				http.StatusUnauthorized,
