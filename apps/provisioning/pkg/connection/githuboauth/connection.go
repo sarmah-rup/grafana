@@ -34,4 +34,7 @@ func (p *provider) ListRepositories(ctx context.Context) ([]provisioning.Externa
 	return repos, nil
 }
 
-var _ oauth.Provider = (*provider)(nil)
+var (
+	_ oauth.Provider         = (*provider)(nil)
+	_ oauth.RepositoryLister = (*provider)(nil)
+)

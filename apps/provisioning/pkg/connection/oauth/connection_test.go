@@ -98,9 +98,9 @@ func TestConnection_Test(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := newMockProvider(t, "")
-			provider.EXPECT().ListRepositories(mock.Anything).Return(nil, tt.listErr).Maybe()
-			conn := newConnection(provider, provisioning.GitLabRepositoryType, testOAuthConfig, "", tt.token)
+			lister := NewMockRepositoryLister(t)
+			lister.EXPECT().ListRepositories(mock.Anything).Return(nil, tt.listErr).Maybe()
+			conn := newConnection(listingProvider{newMockProvider(t, ""), lister}, provisioning.GitLabRepositoryType, testOAuthConfig, "", tt.token)
 
 			results, err := conn.Test(t.Context())
 			require.NoError(t, err)
@@ -180,9 +180,9 @@ func TestConnection_ListRepositories(t *testing.T) {
 	repos := []provisioning.ExternalRepository{{Name: "repo", Owner: "owner", URL: "https://gitlab.com/owner/repo"}}
 
 	t.Run("success", func(t *testing.T) {
-		provider := newMockProvider(t, "")
-		provider.EXPECT().ListRepositories(mock.Anything).Return(repos, nil)
-		conn := newConnection(provider, provisioning.GitLabRepositoryType, testOAuthConfig, "",
+		lister := NewMockRepositoryLister(t)
+		lister.EXPECT().ListRepositories(mock.Anything).Return(repos, nil)
+		conn := newConnection(listingProvider{newMockProvider(t, ""), lister}, provisioning.GitLabRepositoryType, testOAuthConfig, "",
 			marshalTestToken(t, &oauth2.Token{AccessToken: "access"}))
 
 		result, err := conn.ListRepositories(t.Context())
@@ -427,6 +427,11 @@ func TestConnection_ValidateToken(t *testing.T) {
 }
 
 var testOAuthConfig = provisioning.ConnectionOAuthConfig{ClientID: "client-id"}
+
+type listingProvider struct {
+	*MockProvider
+	*MockRepositoryLister
+}
 
 func newMockProvider(t *testing.T, tokenURL string) *MockProvider {
 	provider := NewMockProvider(t)

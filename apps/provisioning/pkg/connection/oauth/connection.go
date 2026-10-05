@@ -18,11 +18,18 @@ import (
 )
 
 // Provider supplies the provider-specific pieces of an OAuth app connection
-// (e.g. GitLab, Bitbucket): its OAuth application settings and API calls.
+// (e.g. GitLab, Bitbucket): its OAuth application settings.
 //
 //go:generate mockery --name Provider --structname MockProvider --inpackage --filename provider_mock.go --with-expecter
 type Provider interface {
 	Endpoint() oauth2.Endpoint
+}
+
+// RepositoryLister is optionally implemented by providers whose API can list
+// the repositories accessible through the connection.
+//
+//go:generate mockery --name RepositoryLister --structname MockRepositoryLister --inpackage --filename repository_lister_mock.go --with-expecter
+type RepositoryLister interface {
 	ListRepositories(ctx context.Context) ([]provisioning.ExternalRepository, error)
 }
 
@@ -58,6 +65,9 @@ func (c *oauthConnection) Test(ctx context.Context) (*provisioning.TestResults, 
 	}
 
 	if _, err := c.ListRepositories(ctx); err != nil {
+		if errors.Is(err, connection.ErrNotImplemented) {
+			return connection.SuccessTestResults(), nil
+		}
 		if errors.Is(err, connection.ErrAuthentication) {
 			return connection.FailedTestResults(
 				http.StatusUnauthorized,
@@ -112,7 +122,11 @@ func (c *oauthConnection) ListRepositories(ctx context.Context) ([]provisioning.
 		return nil, fmt.Errorf("connection access token not available: %w", connection.ErrAuthentication)
 	}
 
-	return c.provider.ListRepositories(ctx)
+	lister, ok := c.provider.(RepositoryLister)
+	if !ok {
+		return nil, connection.ErrNotImplemented
+	}
+	return lister.ListRepositories(ctx)
 }
 
 // GenerateConnectionToken exchanges the stored refresh token for a new access
