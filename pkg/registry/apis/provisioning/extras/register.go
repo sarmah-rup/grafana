@@ -74,7 +74,7 @@ func ProvideProvisioningOSSConnectionExtras(
 		ghconnection.Extra(decrypter, ghFactory),
 		githuboauth.Extra(decrypter, ghRepoFactory),
 		// http:// OAuth endpoints are only allowed in development or when explicitly opted in,
-		// since the client secret and tokens would otherwise travel in cleartext.
+		// since the client secret and tokens would otherwise travel in plaintext.
 		gitoauth.Extra(decrypter, cfg.Env == setting.Dev || cfg.ProvisioningAllowInsecure),
 	}
 }
