@@ -65,17 +65,18 @@ func (c *oauthConnection) Test(ctx context.Context) (*provisioning.TestResults, 
 		), nil
 	}
 
+	if !token.Expiry.IsZero() && time.Now().After(token.Expiry) {
+		return connection.FailedTestResults(
+			http.StatusUnauthorized,
+			[]provisioning.ErrorDetails{{
+				Type:   metav1.CauseTypeFieldValueInvalid,
+				Field:  field.NewPath("secure", "token").String(),
+				Detail: "The connection's access token has expired",
+			}},
+		), nil
+	}
+
 	if _, ok := c.provider.(RepositoryLister); !ok {
-		if !token.Expiry.IsZero() && time.Now().After(token.Expiry) {
-			return connection.FailedTestResults(
-				http.StatusUnauthorized,
-				[]provisioning.ErrorDetails{{
-					Type:   metav1.CauseTypeFieldValueInvalid,
-					Field:  field.NewPath("secure", "token").String(),
-					Detail: "The connection's access token has expired",
-				}},
-			), nil
-		}
 		return connection.SuccessTestResults(), nil
 	}
 
