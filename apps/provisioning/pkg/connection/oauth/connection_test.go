@@ -24,6 +24,7 @@ func TestConnection_Test(t *testing.T) {
 		name           string
 		token          common.RawSecureValue
 		listErr        error
+		withoutLister  bool
 		expectedCode   int
 		expectedErrors []provisioning.ErrorDetails
 		expectSuccess  bool
@@ -33,6 +34,56 @@ func TestConnection_Test(t *testing.T) {
 			token:         marshalTestToken(t, &oauth2.Token{AccessToken: "access"}),
 			expectedCode:  http.StatusOK,
 			expectSuccess: true,
+		},
+		{
+			name:          "success - token not expired yet",
+			token:         marshalTestToken(t, &oauth2.Token{AccessToken: "access", Expiry: time.Now().Add(time.Hour)}),
+			expectedCode:  http.StatusOK,
+			expectSuccess: true,
+		},
+		{
+			name:         "failure - token expired",
+			token:        marshalTestToken(t, &oauth2.Token{AccessToken: "access", Expiry: time.Now().Add(-time.Hour)}),
+			expectedCode: http.StatusUnauthorized,
+			expectedErrors: []provisioning.ErrorDetails{
+				{
+					Type:   metav1.CauseTypeFieldValueInvalid,
+					Field:  "secure.token",
+					Detail: "The connection's access token has expired",
+				},
+			},
+		},
+		{
+			name:          "without lister - success with an unexpired token",
+			token:         marshalTestToken(t, &oauth2.Token{AccessToken: "access", Expiry: time.Now().Add(time.Hour)}),
+			withoutLister: true,
+			expectedCode:  http.StatusOK,
+			expectSuccess: true,
+		},
+		{
+			name:          "without lister - not authorized yet",
+			withoutLister: true,
+			expectedCode:  http.StatusUnauthorized,
+			expectedErrors: []provisioning.ErrorDetails{
+				{
+					Type:   metav1.CauseTypeFieldValueRequired,
+					Field:  "secure.token",
+					Detail: "This connection has not been authorized yet",
+				},
+			},
+		},
+		{
+			name:          "without lister - token expired",
+			token:         marshalTestToken(t, &oauth2.Token{AccessToken: "access", Expiry: time.Now().Add(-time.Hour)}),
+			withoutLister: true,
+			expectedCode:  http.StatusUnauthorized,
+			expectedErrors: []provisioning.ErrorDetails{
+				{
+					Type:   metav1.CauseTypeFieldValueInvalid,
+					Field:  "secure.token",
+					Detail: "The connection's access token has expired",
+				},
+			},
 		},
 		{
 			name:         "failure - no token stored",
@@ -98,9 +149,13 @@ func TestConnection_Test(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lister := NewMockRepositoryLister(t)
-			lister.EXPECT().ListRepositories(mock.Anything).Return(nil, tt.listErr).Maybe()
-			conn := newConnection(listingProvider{newMockProvider(t, ""), lister}, provisioning.GitLabRepositoryType, testOAuthConfig, "", tt.token)
+			var provider Provider = newMockProvider(t, "")
+			if !tt.withoutLister {
+				lister := NewMockRepositoryLister(t)
+				lister.EXPECT().ListRepositories(mock.Anything).Return(nil, tt.listErr).Maybe()
+				provider = listingProvider{newMockProvider(t, ""), lister}
+			}
+			conn := newConnection(provider, provisioning.GitLabRepositoryType, testOAuthConfig, "", tt.token)
 
 			results, err := conn.Test(t.Context())
 			require.NoError(t, err)
