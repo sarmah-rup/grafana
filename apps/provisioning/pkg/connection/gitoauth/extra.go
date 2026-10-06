@@ -57,7 +57,7 @@ func validateEndpoint(path *field.Path, value string, allowInsecure bool) field.
 		return field.ErrorList{field.Invalid(path, value, "must be an absolute URL with a host")}
 	}
 	if !allowInsecure && git.IsInsecureURLWithToken(value, true) {
-		return field.ErrorList{field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in plaintext")}
+		return field.ErrorList{field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in cleartext")}
 	}
 	return nil
 }

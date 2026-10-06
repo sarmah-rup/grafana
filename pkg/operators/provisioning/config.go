@@ -708,7 +708,7 @@ func (c *ControllerConfig) ConnectionExtras() ([]connection.Extra, error) {
 	decrypter := connection.ProvideDecrypter(decryptSvc, connection.RegisterDecryptMetrics(c.Registry()))
 
 	// http:// OAuth endpoints are only allowed in development or when explicitly opted in,
-	// since the client secret and tokens would otherwise travel in plaintext.
+	// since the client secret and tokens would otherwise travel in cleartext.
 	allowInsecure := c.Settings.Env == setting.Dev || c.Settings.SectionWithEnvOverrides("provisioning").Key("allow_insecure").MustBool(false)
 
 	extras := []connection.Extra{
