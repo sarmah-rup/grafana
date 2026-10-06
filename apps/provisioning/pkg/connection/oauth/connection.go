@@ -53,7 +53,8 @@ func newConnection(provider Provider, repoType provisioning.RepositoryType, cfg 
 
 // Test validates that the stored access token works against the provider.
 func (c *oauthConnection) Test(ctx context.Context) (*provisioning.TestResults, error) {
-	if token, err := parseToken(c.token); err != nil || token.AccessToken == "" {
+	token, err := parseToken(c.token)
+	if err != nil || token.AccessToken == "" {
 		return connection.FailedTestResults(
 			http.StatusUnauthorized,
 			[]provisioning.ErrorDetails{{
@@ -65,6 +66,16 @@ func (c *oauthConnection) Test(ctx context.Context) (*provisioning.TestResults, 
 	}
 
 	if _, ok := c.provider.(RepositoryLister); !ok {
+		if !token.Expiry.IsZero() && time.Now().After(token.Expiry) {
+			return connection.FailedTestResults(
+				http.StatusUnauthorized,
+				[]provisioning.ErrorDetails{{
+					Type:   metav1.CauseTypeFieldValueInvalid,
+					Field:  field.NewPath("secure", "token").String(),
+					Detail: "The connection's access token has expired",
+				}},
+			), nil
+		}
 		return connection.SuccessTestResults(), nil
 	}
 

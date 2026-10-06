@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sync"
 	"time"
 	"uuid"
@@ -90,7 +91,7 @@ func oauthAppChanged(new, old *provisioning.Connection) bool {
 	if new.Spec.Type != old.Spec.Type || new.Spec.URL != old.Spec.URL || new.Spec.OAuth.ClientID != old.Spec.OAuth.ClientID {
 		return true
 	}
-	if githubEnterpriseServerURL(new) != githubEnterpriseServerURL(old) || gitOAuthTokenURL(new) != gitOAuthTokenURL(old) {
+	if githubEnterpriseServerURL(new) != githubEnterpriseServerURL(old) || gitOAuthChanged(new, old) {
 		return true
 	}
 	return !new.Secure.ClientSecret.Create.IsZero() ||
@@ -104,11 +105,12 @@ func githubEnterpriseServerURL(c *provisioning.Connection) string {
 	return c.Spec.GitHubEnterpriseOAuth.ServerURL
 }
 
-func gitOAuthTokenURL(c *provisioning.Connection) string {
-	if c.Spec.GitOAuth == nil {
-		return ""
+func gitOAuthChanged(new, old *provisioning.Connection) bool {
+	if new.Spec.GitOAuth == nil || old.Spec.GitOAuth == nil {
+		return new.Spec.GitOAuth != old.Spec.GitOAuth
 	}
-	return c.Spec.GitOAuth.TokenURL
+	return new.Spec.GitOAuth.TokenURL != old.Spec.GitOAuth.TokenURL ||
+		!slices.Equal(new.Spec.GitOAuth.Scopes, old.Spec.GitOAuth.Scopes)
 }
 
 /*

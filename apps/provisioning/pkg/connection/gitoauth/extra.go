@@ -3,6 +3,7 @@ package gitoauth
 import (
 	"context"
 	"errors"
+	"net/url"
 
 	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -51,6 +52,9 @@ func validateEndpoint(path *field.Path, value string, allowInsecure bool) field.
 	}
 	if err := git.ValidateHTTPScheme(path, value); err != nil {
 		return field.ErrorList{err}
+	}
+	if u, err := url.Parse(value); err != nil || u.Host == "" {
+		return field.ErrorList{field.Invalid(path, value, "must be an absolute URL with a host")}
 	}
 	if !allowInsecure && git.IsInsecureURLWithToken(value, true) {
 		return field.ErrorList{field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in cleartext")}
