@@ -42,22 +42,28 @@ func validateSpec(spec provisioning.ConnectionSpec, allowInsecure bool) field.Er
 		return field.ErrorList{field.Required(path, "gitOAuth info must be specified for git OAuth connections")}
 	}
 
-	errs := validateEndpoint(path.Child("authURL"), spec.GitOAuth.AuthURL, allowInsecure)
-	return append(errs, validateEndpoint(path.Child("tokenURL"), spec.GitOAuth.TokenURL, allowInsecure)...)
+	var errs field.ErrorList
+	if err := validateEndpoint(path.Child("authURL"), spec.GitOAuth.AuthURL, allowInsecure); err != nil {
+		errs = append(errs, err)
+	}
+	if err := validateEndpoint(path.Child("tokenURL"), spec.GitOAuth.TokenURL, allowInsecure); err != nil {
+		errs = append(errs, err)
+	}
+	return errs
 }
 
-func validateEndpoint(path *field.Path, value string, allowInsecure bool) field.ErrorList {
+func validateEndpoint(path *field.Path, value string, allowInsecure bool) *field.Error {
 	if value == "" {
-		return field.ErrorList{field.Required(path, "an OAuth endpoint URL is required")}
+		return field.Required(path, "an OAuth endpoint URL is required")
 	}
 	if err := git.ValidateHTTPScheme(path, value); err != nil {
-		return field.ErrorList{err}
+		return err
 	}
 	if u, err := url.Parse(value); err != nil || u.Host == "" {
-		return field.ErrorList{field.Invalid(path, value, "must be an absolute URL with a host")}
+		return field.Invalid(path, value, "must be an absolute URL with a host")
 	}
 	if !allowInsecure && git.IsInsecureURLWithToken(value, true) {
-		return field.ErrorList{field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in cleartext")}
+		return field.Invalid(path, value, "http:// is not allowed; use https:// to avoid sending credentials in cleartext")
 	}
 	return nil
 }
